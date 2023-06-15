@@ -8,12 +8,14 @@ struct ark
 	
 	int *a;			//0x10
 	int *b;
-	int argnb2;		//0x20
-	int elearn;
+	int a_size;		//0x20
+	int b_size;
 	...
 	int a_last;		//0x30
 	...
 	int *sorted_arr;	//0x50
+	...
+	char *name;		//0x60
 };
 
 int *get_argtable(int argnb, char *argv[], int deb, int num)
@@ -136,8 +138,8 @@ void initialize(struct ark *mem)
 	mem->min = mem->sorted_arr[0];
 	mem->max = mem->sorted_arr[mem->argnb - 1];
 	edx = mem->argnb;
-	mem->argnb2 = mem->argnb;
-	mem->elearn = 0;
+	mem->a_size = mem->argnb;
+	mem->b_size = 0;
 	if (mem->a != NULL)
 		mem->a_last = mem->a[mem->argnb - 1];
 	Q[mem + 0x38] = ft_init_int(1);
@@ -146,7 +148,7 @@ void initialize(struct ark *mem)
 	D[mem + 0x44] = 0;
 	D[mem + 0x28] = top(mem, 'a');
 	D[mem + 0x2c] = top(mem, 'b');
-	Q[mem + 0x60] = ft_strnew(1);
+	mem->name = ft_strnew(1);
 }
 
 int parser(int argc, char *argv[], struct ark *mem)
@@ -154,8 +156,8 @@ int parser(int argc, char *argv[], struct ark *mem)
 	int argnb;
 	int deb;
 	mem->argnb = 0;	//mem->argnb가 전체 arg의 수 인듯.
-	mem->argnb2 = 0;
-	mem->elearn = 0;
+	mem->a_size = 0;
+	mem->b_size = 0;
 	deb = debug(mem, argv, argc);
 	while (deb < argc)
 	{
@@ -192,9 +194,9 @@ int check_order_stack(struct ark *mem)
 int top(struct ark *mem, char stack)
 {
 	if (stack == 'a')
-		return (mem->argnb - [mem + 0x20]);
+		return (mem->argnb - mem->a_size);
 	else if (stack == 'b')
-		return (mem->argnb - [mem + 0x24]);
+		return (mem->argnb - mem->b_size);
 	else
 		return 0;
 }
@@ -203,12 +205,12 @@ void swap_operations(struct ark *mem, char *line)
 {
 	int tmp;
 
-	if (ft_strcmp(line, "sa\n") == 0 && [mem + 0x20] > 1) {
+	if (ft_strcmp(line, "sa\n") == 0 && mem->a_size > 1) {
 		tmp = mem->a[top(mem, 'a')];
 		mem->a[top(mem, 'a')] = mem->a[top(mem, 'a') + 1];
 		mem->a[top(mem, 'a') + 1] = tmp;
 	}
-	else if (ft_strcmp(line, "sb\n") == 0 && [mem + 0x24] > 1) {
+	else if (ft_strcmp(line, "sb\n") == 0 && mem->b_size > 1) {
 		tmp = mem->b[top(mem, 'b')];
 		mem->b[top(mem, 'b')] = mem->b[top(mem, 'b') + 1];
 		mem->b[top(mem, 'b') + 1] = tmp;
@@ -218,6 +220,16 @@ void swap_operations(struct ark *mem, char *line)
 		swap_operations(mem, "sb\n");
 	}
 	visual(mem);
+}
+
+void push_operations(struct ark *mem, char *line)
+{
+	if (ft_strcmp(line, "pa\n") == 0 && mem->b_size > 0) {
+		mem->a[top(mem, 'a') - 1] = mem->b[top(mem, 'b')];
+		mem->b[top(mem, 'b')] = 0;
+		--mem->b_size;
+		eax
+	}
 }
 
 int get_instructions(struct ark *mem)
