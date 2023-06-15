@@ -228,7 +228,13 @@ void push_operations(struct ark *mem, char *line)
 		mem->a[top(mem, 'a') - 1] = mem->b[top(mem, 'b')];
 		mem->b[top(mem, 'b')] = 0;
 		--mem->b_size;
-		eax
+		++mem->a_size;
+	}	//+212
+	else if (ft_strcmp(line, "pb\n") == 0 && mem->a_size > 0) {
+		mem->b[top(mem, 'b') - 1] = mem->a[top(mem, 'a')];
+		mem->a[top(mem, 'a')] = 0;
+		--mem->a_size;
+		++mem->b_size;
 	}
 }
 
