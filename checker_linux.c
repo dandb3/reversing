@@ -3,8 +3,17 @@
 struct ark
 {
 	int argnb;
-	int *argtable;
-	int *arr;
+	int min;
+	int max;
+	
+	int *a;			//0x10
+	int *b;
+	int argnb2;		//0x20
+	int elearn;
+	...
+	int a_last;		//0x30
+	...
+	int *sorted_arr;	//0x50
 };
 
 int *get_argtable(int argnb, char *argv[], int deb, int num)
@@ -34,28 +43,29 @@ int *get_argtable(int argnb, char *argv[], int deb, int num)
 	return init_int;
 }
 
+/* argtable에 중첩된 input이 있는지 확인! */
 int check_double(int *argtable, int argnb)
 {
 	for (int i = 0 ; i < argnb; ++i)
 		for (int j = 0; j < argnb; ++j)
-			if ([argtable + i * 4] != [argtable + j * 4] && i == j)
+			if (argtable[i] == argtable[j] && i != j)
 				return -1;
 }
 
 /* argnb 개수만큼의 int를 가지는 배열을 만든다. */
 int *ft_init_int(int argnb)
 {
-	int *addr;
+	int *arr;
 	int idx = 0;
 
 	if (argnb <= 0)
 		return NULL;
-	addr = (int *) malloc(argnb * sizeof(int));
-	if (addr == NULL)
+	arr = (int *) malloc(argnb * sizeof(int));
+	if (arr == NULL)
 		return NULL;
 	for (int idx = 0; idx < argnb; ++idx)
-		addr[idx] = 0;
-	return addr;
+		arr[idx] = 0;
+	return arr;
 }
 
 /* 디버그 모드일 때 2 리턴, 디버그 모드 아니면 1 리턴 */
@@ -70,13 +80,82 @@ int debug(struct ark *mem, char *argv[], int argc)
 	return 2;
 }
 
+int count_argnb(char *str)
+{
+	char **split;
+	int cnt = 0;
+	int idx = 0;
+
+	split = ft_strsplit(str, ' ');
+	while (split[idx] != NULL)
+	{
+		if (check_atoi(split[idx]) == -1) {
+			ft_tabdel(split);
+			return -1;
+		}
+		++cnt;
+		++idx;
+	}
+	ft_tabdel(split);
+	if (cnt != 0)
+		return cnt;
+	else
+		return -1;
+}
+
+int *copy_inttab(int *src, int *dst, int start, int end)
+{
+	int idx = 0;
+
+	while (idx < end - start + 1)
+	{
+		dst[idx] = src[idx + start];
+		++idx;
+	}
+	return dst;
+}
+
+char *ft_strnew(size_t num)
+{
+	int *arr;
+
+	arr = malloc(num + 1);
+	if (arr == NULL)
+		return NULL;
+	++num;
+	while (num-- != 0)
+		arr[num] = 0;
+	return arr;
+}
+
+void initialize(struct ark *mem)
+{
+	mem->sorted_arr = ft_init_int(mem->argnb);
+	mem->sorted_arr = copy_inttab(mem->a, mem->sorted_arr, 0, mem->argnb - 1);
+	mem->sorted_arr = bubble_sort(mem->sorted_arr, mem->argnb);
+	mem->min = mem->sorted_arr[0];
+	mem->max = mem->sorted_arr[mem->argnb - 1];
+	edx = mem->argnb;
+	mem->argnb2 = mem->argnb;
+	mem->elearn = 0;
+	if (mem->a != NULL)
+		mem->a_last = mem->a[mem->argnb - 1];
+	Q[mem + 0x38] = ft_init_int(1);
+	D[mem + 0x48] = 1;
+	D[[mem + 0x38]] = mem->min;
+	D[mem + 0x44] = 0;
+	D[mem + 0x28] = top(mem, 'a');
+	D[mem + 0x2c] = top(mem, 'b');
+	Q[mem + 0x60] = ft_strnew(1);
+}
+
 int parser(int argc, char *argv[], struct ark *mem)
 {
 	int argnb;
 	int deb;
 	mem->argnb = 0;	//mem->argnb가 전체 arg의 수 인듯.
-	mem[8] = 0;
-	mem[9] = 0;
+	mem->argnb2 = 0;
+	mem->elearn = 0;
 	deb = debug(mem, argv, argc);
 	while (deb < argc)
 	{
@@ -90,10 +169,10 @@ int parser(int argc, char *argv[], struct ark *mem)
 		++deb;
 	}
 	deb = debug(mem, argv, argc);
-	mem->argtable = get_argtable(mem->argnb, argv, deb, 0);
-	if (mem->argtable != NULL)
+	mem->a = get_argtable(mem->argnb, argv, deb, 0);
+	if (mem->a != NULL)
 		mem->arr = ft_init_int(mem->argnb);
-	if (check_double(mem->argtable, mem->argnb) == -1)
+	if (check_double(mem->a, mem->argnb) == -1)
 		return -1;
 	initialize(mem);
 	return 0;
@@ -107,6 +186,62 @@ int check_order_stack(struct ark *mem)
 	{
 		
 	}
+	return 0;
+}
+
+int top(struct ark *mem, char stack)
+{
+	if (stack == 'a')
+		return (mem->argnb - [mem + 0x20]);
+	else if (stack == 'b')
+		return (mem->argnb - [mem + 0x24]);
+	else
+		return 0;
+}
+
+void swap_operations(struct ark *mem, char *line)
+{
+	int tmp;
+
+	if (ft_strcmp(line, "sa\n") == 0 && [mem + 0x20] > 1) {
+		tmp = mem->a[top(mem, 'a')];
+		mem->a[top(mem, 'a')] = mem->a[top(mem, 'a') + 1];
+		mem->a[top(mem, 'a') + 1] = tmp;
+	}
+	else if (ft_strcmp(line, "sb\n") == 0 && [mem + 0x24] > 1) {
+		tmp = mem->b[top(mem, 'b')];
+		mem->b[top(mem, 'b')] = mem->b[top(mem, 'b') + 1];
+		mem->b[top(mem, 'b') + 1] = tmp;
+	}
+	else if (ft_strcmp(line, "ss\n") == 0) {
+		swap_operations(mem, "sa\n");
+		swap_operations(mem, "sb\n");
+	}
+	visual(mem);
+}
+
+int get_instructions(struct ark *mem)
+{
+	char *line;
+	int status;
+	int cnt = 0;
+
+	while (cnt != -1 && (status = get_next_line(0, &line) == 1)) {
+		++cnt;
+		if (ft_strcmp(line, "sa\n") == 0 || ft_strcmp(line, "sb\n") == 0 || ft_strcmp(line, "ss\n") == 0)
+			swap_operations(mem, line);
+		else if (ft_strcmp(line, "pa\n") == 0 || ft_strcmp(line, "pb\n") == 0)
+			push_operations(mem, line);
+		else if (ft_strcmp(line, "ra\n") == 0 || ft_strcmp(line, "rb\n") == 0 || ft_strcmp(line, "rr\n") == 0)
+			rotate_operations(mem, line);
+		else if (ft_strcmp(line, "rra\n") == 0 || ft_strcmp(line, "rrb\n") == 0 || ft_strcmp(line, "rrr\n") == 0)
+			reverse_operations(mem, line);
+		else
+			cnt = -1;
+		ft_strdel(line);
+	}
+	if (cnt == -1 || status == -1)
+		return -1;
 	return 0;
 }
 
@@ -129,7 +264,7 @@ int main(int argc, char *argv[])
 	visual(mem);
 	if (get_instructions(mem) == -1)
 		return error(mem, -3);
-	if (check_order_stack(mem) == 0 && mem[0] == mem[8])
+	if (check_order_stack(mem) == 0 && mem->argnb == mem[8])
 		ft_putendl("OK");
 	else
 		ft_putendl("KO");
